@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { ApolloServer } from "apollo-server-express";
 import Express from "express";
 import { Length } from "class-validator";
-import { buildSchema, Resolver, Query, Field, ObjectType, ID, FieldResolver, Root, Arg, InputType, Mutation } from "type-graphql";
+import { buildSchema, Resolver, Query, Field, ObjectType, ID, FieldResolver, Root, Arg, InputType, Mutation, AuthChecker, Authorized } from "type-graphql";
 import { config as dotenv_config } from "dotenv";
 import jwt from "express-jwt";
 
@@ -64,6 +64,7 @@ class GreetingResolver {
     }
 
     @Query(() => [Greeting])
+    @Authorized("user")
     async greetings() {
         return Promise.resolve(greetings.values());
     }
@@ -76,9 +77,24 @@ class GreetingResolver {
     }
 }
 
+interface AuthUserContext {
+    name : string;
+    id : string;
+    scopes : string[];
+}
+
+const customAuthChecker : AuthChecker<AuthUserContext> = ({root, args, context, info}, roles) => {
+    let okay = 0;
+    roles.forEach(r => {
+        if (context.scopes.indexOf(r) >= 0) okay++;
+    })
+    return okay === roles.length;
+}
+
 const main = async () => {
     const schema = await buildSchema({
-        resolvers: [HelloResolver, GreetingResolver]
+        resolvers: [HelloResolver, GreetingResolver],
+        "authChecker": customAuthChecker
     })
 
     const enablePlayground = process.env.NODE_ENV === "development" || process.env.GRAPHQL_ENABLE_PLAYGROUND !== undefined;
@@ -86,7 +102,17 @@ const main = async () => {
         console.log("Enabling GraphQL Playground");
     }
     const apolloServer = new ApolloServer({
-        schema,
+        schema, 
+        "context": ({req}) => {
+            //@ts-ignore
+            const user = req.user as any;
+            const ctx : AuthUserContext = {
+                "name": user.name,
+                "id": user.sub,
+                "scopes": user.scopes.split(" ")
+            }
+            return ctx;
+        },
         "introspection": enablePlayground,
         "playground": enablePlayground
     });
@@ -98,6 +124,7 @@ const main = async () => {
         "credentialsRequired": true,
     }))
 
+    //@ts-ignore
     app.use((err, req, res, next) => {
         if (err.name === 'UnauthorizedError') {
             res.status(err.status).send({ "error": true, "message": err.message });
