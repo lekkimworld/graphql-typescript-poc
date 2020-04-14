@@ -16,8 +16,12 @@ const main = async () => {
         resolvers: [HelloResolver]
     })
 
+    if (process.env.GRAPHQL_ENABLE_PLAYGROUND !== undefined) {
+        console.log("Enabling GraphQL Playground");
+    }
     const apolloServer = new ApolloServer({ 
         schema, 
+        introspection: process.env.GRAPHQL_ENABLE_PLAYGROUND !== undefined,
         playground: process.env.GRAPHQL_ENABLE_PLAYGROUND !== undefined 
     });
     const app = Express();
