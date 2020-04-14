@@ -1,14 +1,17 @@
 import "reflect-metadata";
 import {ApolloServer} from "apollo-server-express";
 import Express from "express";
+import {Length} from "class-validator";
 import {buildSchema, Resolver, Query, Field, ObjectType, ID, FieldResolver, Root, Arg, InputType, Mutation } from "type-graphql";
 
 @InputType()
 class GreetingInput {
     @Field()
+    @Length(2, 2)
     lang : string;
 
     @Field()
+    @Length(2)
     value : string;
 }
 
@@ -49,7 +52,7 @@ class GreetingResolver {
         return `${parent.value} World!`;
     }
 
-    @Query(() => Greeting)
+    @Query(() => Greeting, {nullable: true})
     async greeting(@Arg("lang") lang : string) {
         return greetings.get(lang);
     }
