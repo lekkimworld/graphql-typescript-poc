@@ -1,29 +1,38 @@
 import "reflect-metadata";
 import {ApolloServer} from "apollo-server-express";
-import * as Express from "express";
-import {buildSchema, Resolver, Query, Field, ObjectType, ID, FieldResolver, Root, Arg } from "type-graphql";
+import Express from "express";
+import {buildSchema, Resolver, Query, Field, ObjectType, ID, FieldResolver, Root, Arg, InputType, Mutation } from "type-graphql";
+
+@InputType()
+class GreetingInput {
+    @Field()
+    lang : string;
+
+    @Field()
+    value : string;
+}
 
 @ObjectType()
 class Greeting {
     @Field(() => ID, {nullable: false})
+    readonly lang : string;
+    
+    @Field(() => String, {nullable: false})
     readonly value : string;
-    constructor(value : string) {
-        this.value = value;
-    }
+    
     @Field()
     readonly sentence : string;
+
+    constructor(lang : string, value : string) {
+        this.lang = lang;
+        this.value = value;
+    }
 }
 
 const greetings = new Map<string, Greeting>();
-greetings.set("da", new Greeting("Hej"));
-greetings.set("fr", new Greeting("Bonjour"));
-greetings.set("en", new Greeting("Hello"));
-/* 
-class GetGreetingArgs {
-    @Field()
-    lang : string;
-}
-*/
+greetings.set("de", new Greeting("de", "Servus"));
+greetings.set("fr", new Greeting("fr", "Bonjour"));
+greetings.set("en", new Greeting("en", "Hello"));
 
 @Resolver()
 class HelloResolver {
@@ -44,20 +53,33 @@ class GreetingResolver {
     async greeting(@Arg("lang") lang : string) {
         return greetings.get(lang);
     }
+
+    @Query(() => [Greeting])
+    async greetings() {
+        return Promise.resolve(greetings.values());
+    }
+
+    @Mutation(() => Greeting)
+    async create(@Arg("data") {lang, value} : GreetingInput): Promise<Greeting> {
+        const g = new Greeting(lang, value);
+        greetings.set(lang, g);
+        return Promise.resolve(g);
+    }
 }
 
 const main = async () => {
     const schema = await buildSchema({
         resolvers: [HelloResolver, GreetingResolver]
     })
-
-    if (process.env.NODE_ENV === undefined || process.env.GRAPHQL_ENABLE_PLAYGROUND !== undefined) {
+    
+    const enablePlayground = process.env.NODE_ENV === "development" || process.env.GRAPHQL_ENABLE_PLAYGROUND !== undefined;
+    if (enablePlayground) {
         console.log("Enabling GraphQL Playground");
     }
     const apolloServer = new ApolloServer({ 
         schema, 
-        introspection: process.env.NODE_ENV === undefined || process.env.GRAPHQL_ENABLE_PLAYGROUND !== undefined,
-        playground: process.env.NODE_ENV === undefined || process.env.GRAPHQL_ENABLE_PLAYGROUND !== undefined 
+        "introspection": enablePlayground,
+        "playground": enablePlayground
     });
     const app = Express();
     apolloServer.applyMiddleware({
