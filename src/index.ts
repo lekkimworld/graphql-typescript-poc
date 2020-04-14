@@ -16,7 +16,10 @@ const main = async () => {
         resolvers: [HelloResolver]
     })
 
-    const apolloServer = new ApolloServer({ schema });
+    const apolloServer = new ApolloServer({ 
+        schema, 
+        playground: process.env.GRAPHQL_ENABLE_PLAYGROUND !== undefined 
+    });
     const app = Express();
     apolloServer.applyMiddleware({
         "app": app
