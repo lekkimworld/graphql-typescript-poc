@@ -83,7 +83,7 @@ interface AuthUserContext {
     scopes : string[];
 }
 
-const customAuthChecker : AuthChecker<AuthUserContext> = ({root, args, context, info}, roles) => {
+const customAuthChecker : AuthChecker<AuthUserContext> = ({context}, roles) => {
     let okay = 0;
     roles.forEach(r => {
         if (context.scopes.indexOf(r) >= 0) okay++;
