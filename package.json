@@ -1,12 +1,12 @@
 {
   "name": "poc-typescript-graphql",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "This is a simple PoC for using GraphQL from Typescript.",
+  "main": "src/index.ts",
   "scripts": {
     "start": "ts-node src/index.ts"
   },
-  "author": "",
+  "author": "Mikkel Flindt Heisterberg",
   "license": "ISC",
   "dependencies": {
     "apollo-server-express": "^2.12.0",
